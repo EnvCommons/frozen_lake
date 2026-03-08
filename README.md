@@ -4,7 +4,7 @@
 
 ## Description
 
-**FrozenLake** is an environment for evaluating agents on a grid navigation game where they must reach a goal while avoiding holes on a slippery frozen lake. This environment wraps the FrozenLake implementation from [TextArena](https://github.com/LeonGuertler/TextArena), a framework for text-based game environments.
+**FrozenLake** is an ORS environment for evaluating agents on a grid navigation game where they must reach a goal while avoiding holes on a slippery frozen lake. This environment wraps the FrozenLake implementation from [TextArena](https://github.com/LeonGuertler/TextArena), a framework for text-based game environments.
 
 ## Capabilities
 
