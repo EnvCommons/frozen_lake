@@ -19,8 +19,14 @@ class MoveParams(BaseModel, extra="forbid"):
     @classmethod
     def validate_direction(cls, v):
         v = v.strip().lower()
-        if v not in ("up", "down", "left", "right"):
-            raise ValueError("direction must be one of: up, down, left, right")
+        # Accept both the full words and the w/a/s/d shorthand. The prompt (from
+        # upstream's _prompt()) advertises w/a/s/d, and upstream FrozenLake parses
+        # and maps them (w->up, a->left, s->down, d->right), so the schema must not
+        # reject what the prompt tells the agent to use.
+        if v not in ("up", "down", "left", "right", "w", "a", "s", "d"):
+            raise ValueError(
+                "direction must be one of: up, down, left, right (or w, a, s, d)"
+            )
         return v
 
 
@@ -81,9 +87,6 @@ class FrozenLakeEnvironment(Environment):
             return str(last)
         return str(observation)
 
-    def _map_reward(self, raw):
-        return max(0.0, min(1.0, (raw + 1.0) / 2.0))
-
     async def get_prompt(self):
         self.ta_env.reset(num_players=1, seed=self.config.seed)
         _, obs = self.ta_env.get_observation()
@@ -114,8 +117,13 @@ Reach the goal (G) while avoiding holes (H). The ice may be slippery!"""
         if done:
             self.game_done = True
             rewards, game_info = self.ta_env.close()
-            raw = rewards.get(0, 0.0) if isinstance(rewards, dict) else float(rewards)
-            reward = self._map_reward(raw)
+            # TextArena's FrozenLake reward is already in [0, 1]: a genuine win is
+            # 1.0 and every other terminal outcome is a BFS progress fraction
+            # (_get_percentage_completion, min 0.1 once moved, capped at 0.95). Pass
+            # it through unchanged. The old (raw + 1) / 2 map compressed the usable
+            # band into [0.5, 1.0], making 0.0 mathematically unreachable and paying
+            # a loss up to 0.975.
+            reward = rewards.get(0, 0.0) if isinstance(rewards, dict) else float(rewards)
 
             reason = ""
             if isinstance(game_info, dict) and 0 in game_info:
